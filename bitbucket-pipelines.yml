@@ -1,39 +1,23 @@
-image: python:3.9
-
 pipelines:
   default:
     - step:
-        name: Setup and Run
-        image: python:3.9
+        name: Run Python Script (24 Hours)
+        image: python:3.10  # Or your preferred Python version
+        size: 2x # Use a larger runner size if needed
         script:
-          - echo "Setting up environment..."
-          - pip install telebot flask pymongo aiohttp python-telegram-bot
-          - chmod +x monster
-          - echo "Running the Python script..."
-          - |
-            while true; do
-              python3 monster.py || echo "Application crashed. Restarting..."
-              sleep 5
-            done
-        timeout: 180  # Timeout in minutes (3 hours)
-        condition:
-          changesets:
-            includePaths:
-              - "**"
+          - echo "Starting pipeline..."
+          # Install required dependencies
+          -  pip install telebot flask pymongo aiohttp python-telegram-bot
+          # Make the script executable
+          - chmod +x dark
+          # Run the script in the background using nohup and redirect output
+          - nohup python3 monster.py > output.log 2>&1 &
+          - echo "Background script started. Logs in output.log"
 
-    - step:
-        name: Wait and Restart
-        image: python:3.9
-        script:
-          - echo "Sleeping for 1 hour before restarting pipeline..."
-          - sleep 3600  # Sleep for 1 hour
-          - echo "Restarting the pipeline..."
-          - |
-            curl -X POST -F token=$BITBUCKET_BUILD_NUMBER \
-                         -F branch=main \
-                         https://api.bitbucket.org/2.0/repositories/<workspace>/<repo_slug>/pipelines/
-        timeout: 60  # Timeout in minutes (1 hour)
-        condition:
-          changesets:
-            includePaths:
-              - "**"
+          # Keep pipeline running for (almost) 24 hours
+          # Adjust sleep time as needed, less than 24 hours if needed
+          - sleep 86399 
+        timeout: 24 hours # Sets the maximum time before the step is cancelled
+        # Allow the step to fail after 24 hours
+        # Prevent the pipeline to enter failed state when the 24 hour timeout happens
+        allow_failure: true
